@@ -25,13 +25,11 @@ package hostinventory;
 
 // Interface exported by the server.
 service HostInventory {
-  rpc Create(Host) returns (Host) {}
-
-  rpc Update(Host) returns (Host) {}
+  rpc CreateOrUpdate(HostList) returns (HostList) {}
 
   rpc Get(Filter) returns (HostList) {}
 
-  rpc Delete(Host) returns (Host) {}
+  rpc Delete(HostList) returns (HostList) {}
 }
 
 message UUID {
@@ -44,18 +42,12 @@ message Fact {
     string value = 3;
 }
 
-message Tag {
-    string namespace = 1;
-    string name = 2;
-    string value = 3;
-}
-
 message Host {
     UUID id = 1;
     string display_name = 2;
     repeated Fact facts = 3;
     repeated Fact canonical_facts = 4;
-    repeated Tag tags = 5;
+    repeated Fact tags = 5;
     google.protobuf.Timestamp created = 6;
     google.protobuf.Timestamp updated = 7;
 }
