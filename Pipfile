@@ -7,6 +7,8 @@ name = "pypi"
 ipython = "*"
 grpcio-tools = "*"
 googleapis-common-protos = "*"
+pytest = "*"
+"flake8" = "*"
 
 [packages]
 grpcio = "*"
