@@ -59,5 +59,6 @@ message HostList {
 message Filter {
     repeated UUID ids = 1;
     repeated Fact facts = 2;
-    repeated Tag tags = 3;
+    repeated Fact canonical_facts = 3;
+    repeated Fact tags = 4;
 }

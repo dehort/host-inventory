@@ -8,7 +8,7 @@ import hbi_pb2_grpc
 
 class Servicer(hbi_pb2_grpc.HostInventoryServicer):
 
-    def Create(self, request, context):
+    def CreateOrUpdate(self, request, context):
         print(request)
         return request
 
