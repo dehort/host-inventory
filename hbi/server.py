@@ -2,9 +2,8 @@ from concurrent import futures
 
 import time
 import grpc
-# import hbi_pb2
 
-from . import hbi_pb2_grpc
+from hbi import hbi_pb2_grpc
 
 
 class Servicer(hbi_pb2_grpc.HostInventoryServicer):

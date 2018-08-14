@@ -9,7 +9,7 @@ import time
 class WatchdogTimer(FileSystemEventHandler):
 
     proc = None
-    cmd = ["python", "hbi/server.py"]
+    cmd = ["python", "-m", "hbi.server"]
 
     def __init__(self):
         self.restart()

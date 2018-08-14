@@ -1,6 +1,6 @@
 import grpc
-from .hbi_pb2 import Host, HostList, Fact
-from . import hbi_pb2_grpc
+from hbi.hbi_pb2 import Host, HostList, Fact
+from hbi import hbi_pb2_grpc
 import itertools
 
 colors = ["white", "blue", "orange", "black", "yellow", "green", "red", "taupe"]
