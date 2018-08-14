@@ -1,12 +1,6 @@
-from .server import Servicer
-from .hbi_pb2 import Host, HostList, Fact
-import itertools
-
-colors = ["white", "blue", "orange", "black", "yellow", "green", "red", "taupe"]
-adj = ["flippant", "dashing", "sullen", "starving", "ravishing", "sickly", "gaunt", "spry", "homely", "greasy"]
-nouns = ["condor", "triangle", "notebook", "shovel", "hairbrush", "boots", "clarinet"]
-
-names = itertools.product(colors, adj, nouns)
+from hbi.server import Servicer
+from hbi.hbi_pb2 import Host, HostList, Fact
+from hbi.util import names
 
 
 def test_server():
@@ -21,7 +15,7 @@ def test_server():
                     key="hostname",
                     value=f"{'-'.join(display_name)}.com",
                 )
-            ]) for display_name in names
+            ]) for display_name in names()
     ])
 
     assert host_list == server.CreateOrUpdate(host_list, None)
