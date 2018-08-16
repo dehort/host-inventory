@@ -7,33 +7,38 @@ from concurrent import futures
 from collections import defaultdict
 
 
+def adapt_ft(ft):
+    d = defaultdict(dict)
+    if ft:
+        for fact in ft:
+            d[fact.namespace][fact.key] = fact.value
+    return d
+
+
 class Host(object):
 
-    def __init__(self, host):
-        self.host = host
-        self.id = host.id
-        self.canonical_facts = {f.key: f.value for f in host.canonical_facts}
-        self.facts = self._adapt_facts()
+    def __init__(self, canonical_facts, id_=None, display_name=None, tags=None, facts=None):
+        self.id = id_
+        self.canonical_facts = canonical_facts
+        self.display_name = display_name
+        self.tags = tags or defaultdict(dict)
+        self.facts = facts or defaultdict(dict)
 
-    def _adapt_facts(self):
-        d = defaultdict(dict)
-        for fact in self.host.facts:
-            d[fact.namespace][fact.key] = fact.value
-        return d
+    @classmethod
+    def from_host(cls, host):
+        return cls(
+            {f.key: f.value for f in host.canonical_facts},
+            host.id,
+            host.display_name,
+            adapt_ft(host.tags),
+            adapt_ft(host.facts),
+        )
 
     def __hash__(self):
         return hash(self.id)
 
     def __eq__(self, other):
         return self.id == other.id
-
-    @property
-    def display_name(self):
-        return self.host.display_name
-
-    @display_name.setter
-    def display_name(self, v):
-        self.host.display_name = v
 
     def to_host(self):
         facts = [hbi_pb2.Fact(namespace=namespace, key=k, value=v)
@@ -43,7 +48,7 @@ class Host(object):
         canonical_facts = [hbi_pb2.CanonicalFact(key=k, value=v)
                            for k, v in self.canonical_facts.items()]
 
-        return hbi_pb2.Host(id=self.id, display_name=self.host.display_name,
+        return hbi_pb2.Host(id=self.id, display_name=self.display_name,
                             canonical_facts=canonical_facts,
                             facts=facts)
 
@@ -62,19 +67,19 @@ class Index(object):
     def __init__(self):
         self.dict_ = {}
 
-    def add(self, host_adapter):
-        self.dict_[host_adapter.id] = host_adapter
-        for t in host_adapter.canonical_facts.items():
-            self.dict_[t] = host_adapter
+    def add(self, host):
+        self.dict_[host.id] = host
+        for t in host.canonical_facts.items():
+            self.dict_[t] = host
 
-    def get(self, host_adapter):
-        if host_adapter.id:
-            h = self.dict_.get(host_adapter.id)
+    def get(self, host):
+        if host.id:
+            h = self.dict_.get(host.id)
             if h:
                 return h
-            raise ValueError(f"Could not locate a host with given id {host_adapter.id}")
+            raise ValueError(f"Could not locate a host with given id {host.id}")
 
-        for t in host_adapter.canonical_facts.items():
+        for t in host.canonical_facts.items():
             h = self.dict_.get(t)
             if h:
                 return h
@@ -111,22 +116,7 @@ class Service(object):
             yield existing_host
 
     def get(self, host_list):
-        result = hbi_pb2.HostList()
-
-        for host in host_list.hosts:
-            match = None
-            for fact in host.canonical_facts:
-                fact_string = "=".join(fact.key, fact.value)
-                m = self.canonical_facts.get(fact_string)
-
-                if m is None or m != match:
-                    match = None
-                    break
-
-                match = m
-
-            if match:
-                result.hosts.append(match)
+        pass
 
 
 class Servicer(hbi_pb2_grpc.HostInventoryServicer):
@@ -134,7 +124,7 @@ class Servicer(hbi_pb2_grpc.HostInventoryServicer):
     service = Service()
 
     def CreateOrUpdate(self, host_list, context):
-        hosts = [Host(h) for h in host_list.hosts]
+        hosts = [Host.from_host(h) for h in host_list.hosts]
         ret = self.service.create_or_update(hosts)
         return hbi_pb2.HostList(hosts=[h.to_host() for h in ret])
 

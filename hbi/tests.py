@@ -1,4 +1,4 @@
-from hbi.server import Servicer, Host
+from hbi.server import Servicer, Host, Service
 from hbi.hbi_pb2 import HostList, CanonicalFact
 from hbi.util import names
 import hbi.hbi_pb2 as p
@@ -17,33 +17,34 @@ HOST_LIST = HostList(hosts=[
 
 
 def test_create():
-    ret_hosts = [Host(h) for h in Servicer().CreateOrUpdate(HOST_LIST, None).hosts]
-    ret_hostnames = set(h.canonical_facts["hostname"] for h in ret_hosts)
-    original_hosts = [Host(h) for h in HOST_LIST.hosts]
-    original_hostnames = set(h.canonical_facts["hostname"] for h in original_hosts)
+    host_list = [Host({"hostname": n}, display_name=f"{n}.com")
+                 for n in ("-".join(dn) for dn in names())]
+    ret_hostnames = {h.canonical_facts["hostname"]
+                     for h in Service().create_or_update(host_list)}
+    original_hostnames = {h.canonical_facts["hostname"] for h in host_list}
     assert ret_hostnames == original_hostnames
 
 
-def gen_host(canonical_facts):
-    facts = [CanonicalFact(key=k, value=v) for k, v in canonical_facts.items()]
-    return p.Host(canonical_facts=facts)
+def test_servicer():
+    pass  # ohmygoditsgrossomgomgew
 
 
 def test_update():
-    service = Servicer()
-    canonical_facts = {
+    service = Service()
+    host = Host({
         "insights_id": "1234",
         "hostname": "inventory-test.redhat.com"
-    }
-    host = gen_host(canonical_facts)
-    service.CreateOrUpdate(HostList(hosts=[host]), None)
-    del canonical_facts["insights_id"]
-    host = gen_host(canonical_facts)
-    host.facts.add(key="cpu.count", value="4")
-    ret = service.CreateOrUpdate(HostList(hosts=[host]), None)
-    assert ret.hosts[0].facts[0].value == "4"
-    for k, v in ((f.key, f.value) for f in ret.hosts[0].canonical_facts):
-        if k == "insights_id":
-            assert v == "1234"
-            return
-    assert False, "Failed to find insights_id"
+    })
+
+    next(service.create_or_update([host]))
+
+    host = Host({
+        "hostname": "inventory-test.redhat.com"
+    })
+
+    host.facts["advisor"]["cpu.count"] = "4"
+
+    ret = next(service.create_or_update([host]))
+    assert ret.facts["advisor"]["cpu.count"] == "4"
+    assert ret.canonical_facts["hostname"] == "inventory-test.redhat.com"
+    assert ret.canonical_facts["insights_id"] == "1234"
