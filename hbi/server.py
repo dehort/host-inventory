@@ -7,7 +7,7 @@ from concurrent import futures
 from collections import defaultdict
 
 
-class HostAdapter(object):
+class Host(object):
 
     def __init__(self, host):
         self.host = host
@@ -27,6 +27,14 @@ class HostAdapter(object):
     def __eq__(self, other):
         return self.id == other.id
 
+    @property
+    def display_name(self):
+        return self.host.display_name
+
+    @display_name.setter
+    def display_name(self, v):
+        self.host.display_name = v
+
     def to_host(self):
         facts = [hbi_pb2.Fact(namespace=namespace, key=k, value=v)
                  for namespace, facts in self.facts.items()
@@ -45,6 +53,8 @@ class HostAdapter(object):
 
         for namespace, d in new.facts.items():
             self.facts[namespace] = d
+
+        self.display_name = new.display_name
 
 
 class Index(object):
@@ -69,6 +79,7 @@ class Index(object):
             if h:
                 return h
 
+    # orig *has* to be from a `get` to be safe
     def merge(self, orig, new):
         for t in orig.canonical_facts.items():
             del self.dict_[t]
@@ -79,20 +90,14 @@ class Index(object):
             self.dict_[t] = orig
 
 
-class Servicer(hbi_pb2_grpc.HostInventoryServicer):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class Service(object):
+    def __init__(self):
         self.index = Index()
-        self.host_keys = defaultdict(set)
 
-    def CreateOrUpdate(self, host_list, context):
-        new_host_list = []
-        for host in host_list.hosts:
-            if host.canonical_facts is None and host.id is None:
+    def create_or_update(self, hosts):
+        for h in hosts:
+            if h.canonical_facts is None and h.id is None:
                 raise ValueError("Must provide at least one canonical fact or the ID")
-
-            h = HostAdapter(host)
 
             # search the canonical_facts dict for a match
             existing_host = self.index.get(h)
@@ -103,11 +108,9 @@ class Servicer(hbi_pb2_grpc.HostInventoryServicer):
                 existing_host.id = uuid.uuid4().hex
                 self.index.add(h)
 
-            new_host_list.append(existing_host.to_host())
+            yield existing_host
 
-        return hbi_pb2.HostList(hosts=new_host_list)
-
-    def Get(self, host_list, context):
+    def get(self, host_list):
         result = hbi_pb2.HostList()
 
         for host in host_list.hosts:
@@ -124,6 +127,19 @@ class Servicer(hbi_pb2_grpc.HostInventoryServicer):
 
             if match:
                 result.hosts.append(match)
+
+
+class Servicer(hbi_pb2_grpc.HostInventoryServicer):
+
+    service = Service()
+
+    def CreateOrUpdate(self, host_list, context):
+        hosts = [Host(h) for h in host_list.hosts]
+        ret = self.service.create_or_update(hosts)
+        return hbi_pb2.HostList(hosts=[h.to_host() for h in ret])
+
+    def Get(self, host_list, context):
+        pass
 
 
 def serve():
