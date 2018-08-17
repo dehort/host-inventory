@@ -123,7 +123,7 @@ class Service(object):
         elif type(hosts) != list or any(type(h) != Host for h in hosts):
             raise ValueError("Query must be a list of Host objects")
         else:
-            yield from filter(None, (self.index.get(h) for h in hosts))
+            yield from filter(self.index.get, hosts)
 
 
 class Servicer(hbi_pb2_grpc.HostInventoryServicer):
