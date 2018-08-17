@@ -53,14 +53,17 @@ def test_update(service):
 
     host = Host({
         "hostname": "inventory-test.redhat.com"
+    }, facts={
+        "advisor": {"cpu.count": "4"}
     })
 
-    host.facts["advisor"]["cpu.count"] = "4"
+    def validate(ret):
+        assert ret.facts["advisor"]["cpu.count"] == "4"
+        assert ret.canonical_facts["hostname"] == "inventory-test.redhat.com"
+        assert ret.canonical_facts["insights_id"] == "1234"
 
-    ret = service.create_or_update([host])[0]
-    assert ret.facts["advisor"]["cpu.count"] == "4"
-    assert ret.canonical_facts["hostname"] == "inventory-test.redhat.com"
-    assert ret.canonical_facts["insights_id"] == "1234"
+    validate(service.create_or_update([host])[0])
+    validate(next(service.get([host])))
 
 
 def test_get_all(service):
