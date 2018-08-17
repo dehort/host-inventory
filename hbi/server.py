@@ -66,8 +66,10 @@ class Index(object):
 
     def __init__(self):
         self.dict_ = {}
+        self.all_hosts = set()
 
     def add(self, host):
+        self.all_hosts.add(host)
         self.dict_[host.id] = host
         for t in host.canonical_facts.items():
             self.dict_[t] = host
@@ -115,21 +117,29 @@ class Service(object):
 
             yield existing_host
 
-    def get(self, host_list):
-        pass
+    def get(self, hosts=None):
+        if hosts is None:
+            yield from self.index.all_hosts
+        elif type(hosts) != list or any(type(h) != Host for h in hosts):
+            raise ValueError("Query must be a list of Host objects")
+        else:
+            yield from filter(None, (self.index.get(h) for h in hosts))
 
 
 class Servicer(hbi_pb2_grpc.HostInventoryServicer):
 
     service = Service()
 
-    def CreateOrUpdate(self, host_list, context):
+    def _call(self, host_list, fn):
         hosts = [Host.from_host(h) for h in host_list.hosts]
-        ret = self.service.create_or_update(hosts)
+        ret = fn(hosts)
         return hbi_pb2.HostList(hosts=[h.to_host() for h in ret])
 
+    def CreateOrUpdate(self, host_list, context):
+        return self._call(host_list, self.service.create_or_update)
+
     def Get(self, host_list, context):
-        pass
+        return self._call(host_list, self.service.get)
 
 
 def serve():

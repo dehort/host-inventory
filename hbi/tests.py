@@ -1,14 +1,25 @@
+import hbi.hbi_pb2 as p
+
 from hbi.server import Servicer, Host, Service
 from hbi.hbi_pb2 import HostList, CanonicalFact
 from hbi.util import names
-import hbi.hbi_pb2 as p
+from pytest import fixture
 
 
-def test_create():
-    host_list = [Host({"hostname": n}, display_name=f"{n}.com")
-                 for n in ("-".join(dn) for dn in names())]
+@fixture
+def service():
+    return Service()
+
+
+def gen_host_list():
+    return [Host({"hostname": n}, display_name=f"{n}.com")
+            for n in ("-".join(dn) for dn in names())]
+
+
+def test_create(service):
+    host_list = gen_host_list()
     ret_hostnames = {h.canonical_facts["hostname"]
-                     for h in Service().create_or_update(host_list)}
+                     for h in service.create_or_update(host_list)}
     original_hostnames = {h.canonical_facts["hostname"] for h in host_list}
     assert ret_hostnames == original_hostnames
 
@@ -29,10 +40,10 @@ def test_servicer():
     ret = service.CreateOrUpdate(host_list, None)
     assert len(ret.hosts) == len(host_list.hosts)
     assert host_list.hosts[0].display_name == ret.hosts[0].display_name
+    assert len(service.Get(HostList(hosts=ret.hosts[:1]), None).hosts) == 1
 
 
-def test_update():
-    service = Service()
+def test_update(service):
     host = Host({
         "insights_id": "1234",
         "hostname": "inventory-test.redhat.com"
@@ -50,3 +61,15 @@ def test_update():
     assert ret.facts["advisor"]["cpu.count"] == "4"
     assert ret.canonical_facts["hostname"] == "inventory-test.redhat.com"
     assert ret.canonical_facts["insights_id"] == "1234"
+
+
+def test_get_all(service):
+    hosts = gen_host_list()
+    list(service.create_or_update(hosts))
+    assert sum(1 for _ in service.get()) == len(hosts)
+
+
+def test_get_one(service):
+    hosts = gen_host_list()
+    host = list(service.create_or_update(hosts))[0]
+    assert sum(1 for _ in service.get([host])) == 1
