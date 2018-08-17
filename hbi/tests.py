@@ -4,18 +4,6 @@ from hbi.util import names
 import hbi.hbi_pb2 as p
 
 
-HOST_LIST = HostList(hosts=[
-    p.Host(
-        display_name="-".join(display_name),
-        canonical_facts=[
-            CanonicalFact(
-                key="hostname",
-                value=f"{'-'.join(display_name)}.com",
-            )
-        ]) for display_name in names()
-])
-
-
 def test_create():
     host_list = [Host({"hostname": n}, display_name=f"{n}.com")
                  for n in ("-".join(dn) for dn in names())]
@@ -26,7 +14,21 @@ def test_create():
 
 
 def test_servicer():
-    pass  # ohmygoditsgrossomgomgew
+    host_list = HostList(hosts=[
+        p.Host(
+            display_name="-".join(display_name),
+            canonical_facts=[
+                CanonicalFact(
+                    key="hostname",
+                    value=f"{'-'.join(display_name)}.com",
+                )
+            ]) for display_name in names()
+    ])
+
+    service = Servicer()
+    ret = service.CreateOrUpdate(host_list, None)
+    assert len(ret.hosts) == len(host_list.hosts)
+    assert host_list.hosts[0].display_name == ret.hosts[0].display_name
 
 
 def test_update():
