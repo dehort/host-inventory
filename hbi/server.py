@@ -40,6 +40,9 @@ class Host(object):
     def __eq__(self, other):
         return self.id == other.id
 
+    def __str__(self):
+        return f"{self.id} -> {self.canonical_facts}; {self.facts}"
+
     def to_host(self):
         facts = [hbi_pb2.Fact(namespace=namespace, key=k, value=v)
                  for namespace, facts in self.facts.items()
@@ -123,7 +126,7 @@ class Service(object):
         elif type(hosts) != list or any(type(h) != Host for h in hosts):
             raise ValueError("Query must be a list of Host objects")
         else:
-            yield from filter(self.index.get, hosts)
+            yield from filter(None, map(self.index.get, hosts))
 
 
 class Servicer(hbi_pb2_grpc.HostInventoryServicer):
