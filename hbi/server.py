@@ -115,7 +115,7 @@ class Service(object):
                 existing_host.id = uuid.uuid4().hex
                 self.index.add(h)
 
-            yield existing_host
+        return list(self.get(hosts))
 
     def get(self, hosts=None):
         if hosts is None:

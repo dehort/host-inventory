@@ -49,7 +49,7 @@ def test_update(service):
         "hostname": "inventory-test.redhat.com"
     })
 
-    next(service.create_or_update([host]))
+    service.create_or_update([host])
 
     host = Host({
         "hostname": "inventory-test.redhat.com"
@@ -57,7 +57,7 @@ def test_update(service):
 
     host.facts["advisor"]["cpu.count"] = "4"
 
-    ret = next(service.create_or_update([host]))
+    ret = service.create_or_update([host])[0]
     assert ret.facts["advisor"]["cpu.count"] == "4"
     assert ret.canonical_facts["hostname"] == "inventory-test.redhat.com"
     assert ret.canonical_facts["insights_id"] == "1234"
@@ -65,11 +65,11 @@ def test_update(service):
 
 def test_get_all(service):
     hosts = gen_host_list()
-    list(service.create_or_update(hosts))
+    service.create_or_update(hosts)
     assert sum(1 for _ in service.get()) == len(hosts)
 
 
 def test_get_one(service):
     hosts = gen_host_list()
-    host = list(service.create_or_update(hosts))[0]
-    assert sum(1 for _ in service.get([host])) == 1
+    host = list(service.create_or_update(hosts))[:1]
+    assert sum(1 for _ in service.get(host)) == 1
