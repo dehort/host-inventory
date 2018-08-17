@@ -35,8 +35,10 @@ you run `build.sh` first so the gRPC stubs are generated.
 ### Running server
 
 ```
-python server.py
+python serve.py
 ```
+
+This uses `watchdog` to cycle the server after any code modifications.
 
 ### Running client
 
