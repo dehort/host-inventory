@@ -1,3 +1,4 @@
+import os
 import time
 import grpc
 import uuid
@@ -148,7 +149,7 @@ class Servicer(hbi_pb2_grpc.HostInventoryServicer):
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     hbi_pb2_grpc.add_HostInventoryServicer_to_server(Servicer(), server)
-    server.add_insecure_port('[::]:50051')
+    server.add_insecure_port(f'[::]:{os.environ.get("PORT", "50051")}')
     server.start()
     try:
         while True:
