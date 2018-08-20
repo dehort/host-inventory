@@ -2,9 +2,10 @@ import grpc
 from hbi.hbi_pb2 import Host, HostList, Fact
 from hbi import hbi_pb2_grpc, util
 
+host = os.environ.get("HOST_INVENTORY_SERVICE_HOST", "localhost")
 
 def run():
-    with grpc.insecure_channel('localhost:50051') as channel:
+    with grpc.insecure_channel(f'{host}:50051') as channel:
         stub = hbi_pb2_grpc.HostInventoryStub(channel)
         for name in util.names():
             display_name = "-".join(name)
