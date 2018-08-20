@@ -1,3 +1,4 @@
+import os
 import grpc
 from hbi.hbi_pb2 import Host, HostList, Fact
 from hbi import hbi_pb2_grpc, util
