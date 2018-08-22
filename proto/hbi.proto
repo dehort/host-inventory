@@ -57,6 +57,10 @@ message HostList {
     repeated Host hosts = 1;
 }
 
+message FilterList {
+    repeated Filter filters = 1;
+}
+
 message Filter {
     repeated string ids = 1;
     repeated Fact facts = 2;

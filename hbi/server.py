@@ -16,6 +16,15 @@ def adapt_ft(ft):
     return d
 
 
+class Filter(object):
+
+    def __init__(self, canonical_facts=None, id_=None, tags=None, facts=None):
+        self.id = id_
+        self.canonical_facts = canonical_facts or {}
+        self.tags = tags or defaultdict(dict)
+        self.facts = facts or defaultdict(dict)
+
+
 class Host(object):
 
     def __init__(self, canonical_facts, id_=None, display_name=None, tags=None, facts=None):
@@ -26,7 +35,16 @@ class Host(object):
         self.facts = facts or defaultdict(dict)
 
     @classmethod
-    def from_host(cls, host):
+    def from_filter(cls, filter_):
+        return cls(
+            {f.key: f.value for f in filter_.canonical_facts},
+            filter_.id,
+            adapt_ft(filter_.tags),
+            adapt_ft(filter_.facts),
+        )
+
+    @classmethod
+    def from_pb_host(cls, host):
         return cls(
             {f.key: f.value for f in host.canonical_facts},
             host.id,
@@ -44,7 +62,10 @@ class Host(object):
     def __str__(self):
         return f"{self.id} -> {self.canonical_facts}; {self.facts}"
 
-    def to_host(self):
+    def to_filter(self):
+        return Filter(self.canonical_facts, self.id, self.tags, self.facts)
+
+    def to_pb_host(self):
         facts = [hbi_pb2.Fact(namespace=namespace, key=k, value=v)
                  for namespace, facts in self.facts.items()
                  for k, v in facts.items()]
@@ -106,6 +127,7 @@ class Service(object):
         self.index = Index()
 
     def create_or_update(self, hosts):
+        ret = []
         for h in hosts:
             if h.canonical_facts is None and h.id is None:
                 raise ValueError("Must provide at least one canonical fact or the ID")
@@ -119,31 +141,34 @@ class Service(object):
                 existing_host.id = uuid.uuid4().hex
                 self.index.add(h)
 
-        return list(self.get(hosts))
+            ret.append(existing_host)
 
-    def get(self, hosts=None):
-        if hosts is None:
+        return ret
+
+    def get(self, filters=None):
+        for f in (filters or []):
+            print(type(f))
+        if filters is None:
             yield from self.index.all_hosts
-        elif type(hosts) != list or any(type(h) != Host for h in hosts):
-            raise ValueError("Query must be a list of Host objects")
+        elif type(filters) != list or any(type(f) != Filter for f in filters):
+            raise ValueError("Query must be a list of Filter objects")
         else:
-            yield from filter(None, map(self.index.get, hosts))
+            yield from filter(None, map(self.index.get, filters))
 
 
 class Servicer(hbi_pb2_grpc.HostInventoryServicer):
 
     service = Service()
 
-    def _call(self, host_list, fn):
-        hosts = [Host.from_host(h) for h in host_list.hosts]
-        ret = fn(hosts)
-        return hbi_pb2.HostList(hosts=[h.to_host() for h in ret])
-
     def CreateOrUpdate(self, host_list, context):
-        return self._call(host_list, self.service.create_or_update)
+        hosts = [Host.from_pb_host(h) for h in host_list.hosts]
+        ret = self.service.create_or_update(hosts)
+        return hbi_pb2.HostList(hosts=[h.to_pb_host() for h in ret])
 
-    def Get(self, host_list, context):
-        return self._call(host_list, self.service.get)
+    def Get(self, filter_list, context):
+        filters = [Host.from_filter(f) for f in filter_list.filters]
+        ret = self.service.get(filters)
+        return hbi_pb2.HostList(hosts=[h.to_pb_host() for h in ret])
 
 
 def serve():
@@ -151,12 +176,13 @@ def serve():
     hbi_pb2_grpc.add_HostInventoryServicer_to_server(Servicer(), server)
     server.add_insecure_port(f'[::]:{os.environ.get("PORT", "50051")}')
     server.start()
+    return server
+
+
+if __name__ == "__main__":
+    server = serve()
     try:
         while True:
             time.sleep(86400)
     except KeyboardInterrupt:
         server.stop(0)
-
-
-if __name__ == "__main__":
-    serve()
