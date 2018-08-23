@@ -3,7 +3,7 @@ import grpc
 import hbi.hbi_pb2 as p
 import hbi.hbi_pb2_grpc as g
 
-from hbi.server import Servicer, Host, Service, serve
+from hbi.server import Host, Filter, Service, serve
 from hbi.hbi_pb2 import HostList, FilterList, CanonicalFact
 from hbi.util import names
 from pytest import fixture
@@ -12,6 +12,7 @@ from pytest import fixture
 @fixture
 def service():
     return Service()
+
 
 @fixture
 def grpc_client():
@@ -50,7 +51,7 @@ def test_grpc(grpc_client):
     ret = grpc_client.CreateOrUpdate(host_list, None)
     assert len(ret.hosts) == len(host_list.hosts)
     assert host_list.hosts[0].display_name == ret.hosts[0].display_name
-    filters = [h.to_filter() for h in ret.hosts[:1]]
+    filters = [p.Filter(ids=[ret.hosts[0].id])]
     assert len(grpc_client.Get(FilterList(filters=filters), None).hosts) == 1
 
 
@@ -73,17 +74,18 @@ def test_update(service):
         assert ret.canonical_facts["hostname"] == "inventory-test.redhat.com"
         assert ret.canonical_facts["insights_id"] == "1234"
 
-    validate(service.create_or_update([host])[0])
-    validate(next(service.get([host.to_filter()])))
+    host = service.create_or_update([host])[0]
+    validate(host)
+    validate(service.get([Filter(ids=[host.id])])[0])
 
 
 def test_get_all(service):
     hosts = gen_host_list()
     service.create_or_update(hosts)
-    assert sum(1 for _ in service.get()) == len(hosts)
+    assert len(service.get()) == len(hosts)
 
 
 def test_get_one(service):
     hosts = gen_host_list()
-    hosts = list(service.create_or_update(hosts))[:1]
-    assert sum(1 for _ in service.get([h.to_filter() for h in hosts])) == 1
+    filters = Filter(ids=[service.create_or_update(hosts)[0].id])
+    assert len(service.get([filters])) == 1

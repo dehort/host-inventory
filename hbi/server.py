@@ -6,6 +6,7 @@ import uuid
 from hbi import hbi_pb2_grpc, hbi_pb2
 from concurrent import futures
 from collections import defaultdict
+from itertools import chain
 
 
 def adapt_ft(ft):
@@ -18,11 +19,20 @@ def adapt_ft(ft):
 
 class Filter(object):
 
-    def __init__(self, canonical_facts=None, id_=None, tags=None, facts=None):
-        self.id = id_
+    def __init__(self, canonical_facts=None, ids=None, tags=None, facts=None):
+        self.ids = ids
         self.canonical_facts = canonical_facts or {}
         self.tags = tags or defaultdict(dict)
         self.facts = facts or defaultdict(dict)
+
+    @classmethod
+    def from_pb(cls, filter_):
+        return cls(
+            {f.key: f.value for f in filter_.canonical_facts},
+            filter_.ids,
+            adapt_ft(filter_.tags),
+            adapt_ft(filter_.facts),
+        )
 
 
 class Host(object):
@@ -35,16 +45,7 @@ class Host(object):
         self.facts = facts or defaultdict(dict)
 
     @classmethod
-    def from_filter(cls, filter_):
-        return cls(
-            {f.key: f.value for f in filter_.canonical_facts},
-            filter_.id,
-            adapt_ft(filter_.tags),
-            adapt_ft(filter_.facts),
-        )
-
-    @classmethod
-    def from_pb_host(cls, host):
+    def from_pb(cls, host):
         return cls(
             {f.key: f.value for f in host.canonical_facts},
             host.id,
@@ -62,10 +63,7 @@ class Host(object):
     def __str__(self):
         return f"{self.id} -> {self.canonical_facts}; {self.facts}"
 
-    def to_filter(self):
-        return Filter(self.canonical_facts, self.id, self.tags, self.facts)
-
-    def to_pb_host(self):
+    def to_pb(self):
         facts = [hbi_pb2.Fact(namespace=namespace, key=k, value=v)
                  for namespace, facts in self.facts.items()
                  for k, v in facts.items()]
@@ -98,6 +96,10 @@ class Index(object):
         self.dict_[host.id] = host
         for t in host.canonical_facts.items():
             self.dict_[t] = host
+        for k, v in chain(host.facts.items(), host.tags.items()):
+            if t not in self.dict_:
+                self.dict_[k] = set()
+            self.dict[k].append(v)
 
     def get(self, host):
         if host.id:
@@ -110,6 +112,19 @@ class Index(object):
             h = self.dict_.get(t)
             if h:
                 return h
+
+    def apply_filter(self, f, hosts=None):
+        hosts = hosts or self.all_hosts
+
+        iterables = (
+            f.ids, f.canonical_facts.items(),
+            f.facts.items(), f.tags.items()
+        )
+
+        for i in chain(*iterables):
+            v = self.dict_.get(i)
+            if v in hosts:
+                yield from v if type(v) == list else [v]
 
     # orig *has* to be from a `get` to be safe
     def merge(self, orig, new):
@@ -146,14 +161,15 @@ class Service(object):
         return ret
 
     def get(self, filters=None):
-        for f in (filters or []):
-            print(type(f))
         if filters is None:
-            yield from self.index.all_hosts
+            return self.index.all_hosts
         elif type(filters) != list or any(type(f) != Filter for f in filters):
             raise ValueError("Query must be a list of Filter objects")
         else:
-            yield from filter(None, map(self.index.get, filters))
+            filtered_set = None
+            for f in filters:
+                filtered_set = list(self.index.apply_filter(f, filtered_set))
+            return filtered_set
 
 
 class Servicer(hbi_pb2_grpc.HostInventoryServicer):
@@ -161,14 +177,14 @@ class Servicer(hbi_pb2_grpc.HostInventoryServicer):
     service = Service()
 
     def CreateOrUpdate(self, host_list, context):
-        hosts = [Host.from_pb_host(h) for h in host_list.hosts]
+        hosts = [Host.from_pb(h) for h in host_list.hosts]
         ret = self.service.create_or_update(hosts)
-        return hbi_pb2.HostList(hosts=[h.to_pb_host() for h in ret])
+        return hbi_pb2.HostList(hosts=[h.to_pb() for h in ret])
 
     def Get(self, filter_list, context):
-        filters = [Host.from_filter(f) for f in filter_list.filters]
+        filters = [Filter.from_pb(f) for f in filter_list.filters]
         ret = self.service.get(filters)
-        return hbi_pb2.HostList(hosts=[h.to_pb_host() for h in ret])
+        return hbi_pb2.HostList(hosts=[h.to_pb() for h in ret])
 
 
 def serve():

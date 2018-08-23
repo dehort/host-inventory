@@ -27,7 +27,7 @@ package hostinventory;
 service HostInventory {
   rpc CreateOrUpdate(HostList) returns (HostList) {}
 
-  rpc Get(Filter) returns (HostList) {}
+  rpc Get(FilterList) returns (HostList) {}
 
   rpc Delete(HostList) returns (HostList) {}
 }
