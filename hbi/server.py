@@ -96,10 +96,10 @@ class Index(object):
         self.dict_[host.id] = host
         for t in host.canonical_facts.items():
             self.dict_[t] = host
-        for k, v in chain(host.facts.items(), host.tags.items()):
+        for t in chain(host.facts.items(), host.tags.items()):
             if t not in self.dict_:
-                self.dict_[k] = set()
-            self.dict[k].append(v)
+                self.dict_[t] = set()
+            self.dict_[t].add(host)
 
     def get(self, host):
         if host.id:
@@ -116,15 +116,17 @@ class Index(object):
     def apply_filter(self, f, hosts=None):
         hosts = hosts or self.all_hosts
 
-        iterables = (
+        iterables = filter(None, (
             f.ids, f.canonical_facts.items(),
             f.facts.items(), f.tags.items()
-        )
+        ))
 
         for i in chain(*iterables):
             v = self.dict_.get(i)
-            if v in hosts:
-                yield from v if type(v) == list else [v]
+            if type(v) == set:
+                yield from (i for i in v if i in hosts)
+            elif v in hosts:
+                yield v
 
     # orig *has* to be from a `get` to be safe
     def merge(self, orig, new):
@@ -168,8 +170,8 @@ class Service(object):
         else:
             filtered_set = None
             for f in filters:
-                filtered_set = list(self.index.apply_filter(f, filtered_set))
-            return filtered_set
+                filtered_set = set(self.index.apply_filter(f, filtered_set))
+            return list(filtered_set)
 
 
 class Servicer(hbi_pb2_grpc.HostInventoryServicer):

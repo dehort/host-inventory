@@ -89,3 +89,17 @@ def test_get_one(service):
     hosts = gen_host_list()
     filters = Filter(ids=[service.create_or_update(hosts)[0].id])
     assert len(service.get([filters])) == 1
+
+
+def test_get_fact(service):
+    h = Host({"insights_id": "a"}, facts={"host": "test"})
+    service.create_or_update([h])
+    r = service.get([Filter(facts={"host": "test"})])
+    assert len(r) == 1
+
+
+def test_get_tag(service):
+    h = Host({"insights_id": "a"}, tags={"env": "prod"})
+    service.create_or_update([h])
+    r = service.get([Filter(tags={"env": "prod"})])
+    assert len(r) == 1
