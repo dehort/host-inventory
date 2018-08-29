@@ -10,6 +10,10 @@ from hbi import hbi_pb2_grpc, hbi_pb2
 from hbi.model import Host, Filter
 
 
+def flat_fact_chain(f):
+    return chain.from_iterable(v.items() for v in f.values())
+
+
 class Index(object):
 
     def __init__(self):
@@ -21,7 +25,10 @@ class Index(object):
         self.dict_[host.id] = host
         for t in host.canonical_facts.items():
             self.dict_[t] = host
-        for t in chain(host.facts.items(), host.tags.items()):
+        # TODO: Actually USE the namespaces
+        f_chain = flat_fact_chain(host.facts)
+        t_chain = flat_fact_chain(host.tags)
+        for t in chain(f_chain, t_chain):
             if t not in self.dict_:
                 self.dict_[t] = set()
             self.dict_[t].add(host)
@@ -41,9 +48,11 @@ class Index(object):
     def apply_filter(self, f, hosts=None):
         hosts = hosts or self.all_hosts
 
+        # TODO: Actually USE the fact & tag namespaces
         iterables = filter(None, (
             f.ids, f.canonical_facts.items(),
-            f.facts.items(), f.tags.items()
+            flat_fact_chain(f.facts),
+            flat_fact_chain(f.tags)
         ))
 
         for i in chain(*iterables):
@@ -58,6 +67,7 @@ class Index(object):
         for t in orig.canonical_facts.items():
             del self.dict_[t]
 
+        # TODO: update index dict for facts and tags
         orig.merge(new)
 
         for t in orig.canonical_facts.items():
@@ -88,20 +98,21 @@ class Service(object):
         return ret
 
     def get(self, filters=None):
-        if filters is None:
-            return self.index.all_hosts
+        if not filters:
+            return list(self.index.all_hosts)
         elif type(filters) != list or any(type(f) != Filter for f in filters):
             raise ValueError("Query must be a list of Filter objects")
         else:
             filtered_set = None
             for f in filters:
                 filtered_set = set(self.index.apply_filter(f, filtered_set))
-            return list(filtered_set)
+            return list(filtered_set or set())
 
 
 class Servicer(hbi_pb2_grpc.HostInventoryServicer):
 
-    service = Service()
+    def __init__(self):
+        self.service = Service()
 
     def CreateOrUpdate(self, host_list, context):
         hosts = [Host.from_pb(h) for h in host_list.hosts]

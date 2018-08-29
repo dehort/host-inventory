@@ -3,7 +3,17 @@ from collections import defaultdict
 from hbi import hbi_pb2
 
 
-def adapt_ft(ft):
+def to_fact_pb(ft, canonical=False):
+    if canonical:
+        return [hbi_pb2.CanonicalFact(key=k, value=v)
+                for k, v in ft.items()]
+    else:
+        return [hbi_pb2.Fact(namespace=namespace, key=k, value=v)
+                for namespace, facts in ft.items()
+                for k, v in facts.items()]
+
+
+def from_fact_pb(ft):
     d = defaultdict(dict)
     if ft:
         for fact in ft:
@@ -24,8 +34,16 @@ class Filter(object):
         return cls(
             {f.key: f.value for f in filter_.canonical_facts},
             filter_.ids,
-            adapt_ft(filter_.tags),
-            adapt_ft(filter_.facts),
+            from_fact_pb(filter_.tags),
+            from_fact_pb(filter_.facts),
+        )
+
+    def to_pb(self):
+        return hbi_pb2.Filter(
+            ids=self.ids,
+            canonical_facts=to_fact_pb(self.canonical_facts, canonical=True),
+            facts=to_fact_pb(self.facts),
+            tags=to_fact_pb(self.tags)
         )
 
 
@@ -44,8 +62,8 @@ class Host(object):
             {f.key: f.value for f in host.canonical_facts},
             host.id,
             host.display_name,
-            adapt_ft(host.tags),
-            adapt_ft(host.facts),
+            from_fact_pb(host.tags),
+            from_fact_pb(host.facts),
         )
 
     def __hash__(self):
@@ -58,15 +76,14 @@ class Host(object):
         return f"{self.id} -> {self.canonical_facts}; {self.facts}"
 
     def to_pb(self):
-        facts = [hbi_pb2.Fact(namespace=namespace, key=k, value=v)
-                 for namespace, facts in self.facts.items()
-                 for k, v in facts.items()]
+        facts = to_fact_pb(self.facts)
+        canonical_facts = to_fact_pb(self.canonical_facts, canonical=True)
+        tags = to_fact_pb(self.tags)
 
-        canonical_facts = [hbi_pb2.CanonicalFact(key=k, value=v)
-                           for k, v in self.canonical_facts.items()]
-
-        return hbi_pb2.Host(id=self.id, display_name=self.display_name,
+        return hbi_pb2.Host(id=self.id,
+                            display_name=self.display_name,
                             canonical_facts=canonical_facts,
+                            tags=tags,
                             facts=facts)
 
     def merge(self, new):
@@ -75,5 +92,8 @@ class Host(object):
 
         for namespace, d in new.facts.items():
             self.facts[namespace] = d
+
+        for namespace, d in new.tags.items():
+            self.tags[namespace] = d
 
         self.display_name = new.display_name
