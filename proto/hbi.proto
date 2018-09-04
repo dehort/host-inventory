@@ -51,6 +51,7 @@ message Host {
     repeated Fact tags = 5;
     google.protobuf.Timestamp created = 6;
     google.protobuf.Timestamp updated = 7;
+    string account_number = 8;
 }
 
 message HostList {
@@ -66,4 +67,5 @@ message Filter {
     repeated Fact facts = 2;
     repeated CanonicalFact canonical_facts = 3;
     repeated Fact tags = 4;
+    repeated string account_numbers = 5;
 }

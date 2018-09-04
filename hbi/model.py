@@ -23,17 +23,20 @@ def from_fact_pb(ft):
 
 class Filter(object):
 
-    def __init__(self, canonical_facts=None, ids=None, tags=None, facts=None):
+    def __init__(self, canonical_facts=None, ids=None, account_numbers=None,
+                 tags=None, facts=None):
         self.ids = ids
         self.canonical_facts = canonical_facts or {}
         self.tags = tags or defaultdict(dict)
         self.facts = facts or defaultdict(dict)
+        self.account_numbers = account_numbers
 
     @classmethod
     def from_pb(cls, filter_):
         return cls(
             {f.key: f.value for f in filter_.canonical_facts},
             filter_.ids,
+            filter_.account_numbers,
             from_fact_pb(filter_.tags),
             from_fact_pb(filter_.facts),
         )
@@ -42,6 +45,7 @@ class Filter(object):
         return hbi_pb2.Filter(
             ids=self.ids,
             canonical_facts=to_fact_pb(self.canonical_facts, canonical=True),
+            account_numbers=self.account_numbers,
             facts=to_fact_pb(self.facts),
             tags=to_fact_pb(self.tags)
         )
@@ -49,18 +53,21 @@ class Filter(object):
 
 class Host(object):
 
-    def __init__(self, canonical_facts, id_=None, display_name=None, tags=None, facts=None):
+    def __init__(self, canonical_facts, id_=None, account_number=None,
+                 display_name=None, tags=None, facts=None):
         self.id = id_
         self.canonical_facts = canonical_facts
         self.display_name = display_name
         self.tags = tags or defaultdict(dict)
         self.facts = facts or defaultdict(dict)
+        self.account_number = account_number
 
     @classmethod
     def from_pb(cls, host):
         return cls(
             {f.key: f.value for f in host.canonical_facts},
             host.id,
+            host.account_number,
             host.display_name,
             from_fact_pb(host.tags),
             from_fact_pb(host.facts),
@@ -81,6 +88,7 @@ class Host(object):
         tags = to_fact_pb(self.tags)
 
         return hbi_pb2.Host(id=self.id,
+                            account_number=self.account_number,
                             display_name=self.display_name,
                             canonical_facts=canonical_facts,
                             tags=tags,

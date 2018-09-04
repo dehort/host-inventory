@@ -83,22 +83,26 @@ def mf_hosts():
         Host(
             display_name='test1.example.org',
             canonical_facts={'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF00'},
-            facts={'advisor': {'account': '1234567', 'role': 'host'}},
+            facts={'advisor': {'role': 'host'}},
+            account_number='1234567',
         ),
         Host(
             display_name='test2.example.org',
             canonical_facts={'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF11'},
-            facts={'advisor': {'account': '1234567', 'role': 'manager'}},
+            facts={'advisor': {'role': 'manager'}},
+            account_number='1234567',
         ),
         Host(
             display_name='test1.example.net',
             canonical_facts={'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF22'},
-            facts={'advisor': {'account': '1122334', 'role': 'host'}},
+            facts={'advisor': {'role': 'host'}},
+            account_number='1122334',
         ),
         Host(
             display_name='test2.example.net',
             canonical_facts={'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF33'},
-            facts={'advisor': {'account': '1122334', 'role': 'manager'}},
+            facts={'advisor': {'role': 'manager'}},
+            account_number='1122334',
         ),
     ]
 
@@ -145,10 +149,10 @@ def test_one_host_one_fact(mfs):
 def test_multiple_hosts_one_account(mfs, mf_hosts):
     """
     We should be able to get multiple hosts by a single
-    filter on account fact.
+    filter on account.
     """
     hf = mfs.get(filters=[
-        Filter(facts={'advisor': {'account': '1122334'}})
+        Filter(account_numbers=['1122334'])
     ])
     assert isinstance(hf, list)
     assert len(hf) == 2
@@ -162,7 +166,7 @@ def test_one_host_multiple_filters(mfs, mf_hosts):
     Separate filters AND together - intersection of sets.
     """
     hf = mfs.get(filters=[
-        Filter(facts={'advisor': {'account': '1122334'}}),
+        Filter(account_numbers=['1122334']),
         Filter(facts={'advisor': {'role': 'host'}})
     ])
     assert isinstance(hf, list)
@@ -171,9 +175,12 @@ def test_one_host_multiple_filters(mfs, mf_hosts):
 
 
 def test_one_host_account_and_uuid(mfs, mf_hosts):
-    # We should be able to get a single host by multiple filters on facts and canonical_facts.
+    """
+    We should be able to get a single host by multiple filters on facts and
+    canonical_facts.
+    """
     hf = mfs.get(filters=[
-        Filter(facts={'advisor': {'account': '1234567'}}),
+        Filter(account_numbers=['1234567']),
         Filter(canonical_facts={
             'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF11',
         })
@@ -186,7 +193,7 @@ def test_one_host_account_and_uuid(mfs, mf_hosts):
 def test_no_hosts_multiple_filters(mfs, mf_hosts):
     """When multiple filters have no intersection, we should get nothing"""
     hf = mfs.get(filters=[
-        Filter(facts={'advisor': {'account': '1122334'}}),
+        Filter(account_numbers=['1122334']),
         Filter(canonical_facts={
             'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF11'
         })
@@ -202,7 +209,7 @@ def test_multiple_hosts_and_facts_one_filter(mfs, mf_hosts):
     In the same filter, facts OR together - union of sets.
     """
     hf = mfs.get(filters=[
-        Filter(facts={'advisor': {'account': '1122334', 'role': 'manager'}})
+        Filter(facts={'advisor': {'role': 'manager'}}, account_numbers=['1122334'])
     ])
     assert isinstance(hf, list)
     assert len(hf) == 3
@@ -219,7 +226,7 @@ def test_one_filter_takes_out_all(mfs, mf_hosts):
         Filter(canonical_facts={
             'insights_uuid': '11223344-5566-7788-99AA-000000000000'
         }),
-        Filter(facts={'advisor': {'account': '1122334'}}),
+        Filter(account_numbers=['1122334']),
     ])
     assert isinstance(hf, list)
     assert len(hf) == 0
@@ -231,7 +238,7 @@ def test_one_filter_takes_out_all_reverse_order(mfs, mf_hosts):
     multiple filters, we should still get nothing (multiple fact first)
     """
     hf = mfs.get(filters=[
-        Filter(facts={'advisor': {'account': '1122334'}}),
+        Filter(account_numbers=['1122334']),
         Filter(canonical_facts={
             'insights_uuid': '11223344-5566-7788-99AA-000000000000'
         }),

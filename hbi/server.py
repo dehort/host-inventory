@@ -5,6 +5,7 @@ import uuid
 
 from concurrent import futures
 from itertools import chain
+from collections import defaultdict
 
 from hbi import hbi_pb2_grpc, hbi_pb2
 from hbi.model import Host, Filter
@@ -19,6 +20,7 @@ class Index(object):
     def __init__(self):
         self.dict_ = {}
         self.all_hosts = set()
+        self.account_dict = defaultdict(set)
 
     def add(self, host):
         if not isinstance(host, Host):
@@ -26,6 +28,7 @@ class Index(object):
             raise ValueError(msg)
         self.all_hosts.add(host)
         self.dict_[host.id] = host
+        self.account_dict[host.account_number].add(host)
         for t in host.canonical_facts.items():
             self.dict_[t] = host
         # TODO: Actually USE the namespaces
@@ -57,6 +60,10 @@ class Index(object):
             flat_fact_chain(f.facts),
             flat_fact_chain(f.tags)
         ))
+
+        if f.account_numbers:
+            for acct in f.account_numbers:
+                yield from self.account_dict[acct]
 
         for i in chain(*iterables):
             v = self.dict_.get(i)
