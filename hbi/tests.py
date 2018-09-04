@@ -77,8 +77,9 @@ def test_get_one(service, host_list):
     assert len(service.get([filters])) == 1
 
 
-def test_multiple_filters(service):
-    hosts = [
+@fixture
+def mf_hosts():
+    return [
         Host(
             display_name='test1.example.org',
             canonical_facts={'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF00'},
@@ -100,105 +101,143 @@ def test_multiple_filters(service):
             facts={'advisor': {'account': '1122334', 'role': 'manager'}},
         ),
     ]
-    hosts_added = service.create_or_update(hosts)
-    assert isinstance(hosts_added, list)
-    assert len(hosts) == len(hosts_added)
-    for hostnum in range(len(hosts)):
-        # Compare pb2 objects directly
-        assert hosts_added[hostnum].display_name == hosts[hostnum].display_name
-        assert hosts_added[hostnum].canonical_facts == hosts[hostnum].canonical_facts
-        assert hosts_added[hostnum].facts == hosts[hostnum].facts
 
-    # We should be able to get one host by a single filter on ID.
-    hf1 = service.get(filters=[
+
+@fixture
+def mfs(service, mf_hosts):
+    """Multiple Filter Service"""
+    hosts_added = service.create_or_update(mf_hosts)
+    assert isinstance(hosts_added, list)
+    assert len(mf_hosts) == len(hosts_added)
+    for hostnum in range(len(mf_hosts)):
+        # Compare pb2 objects directly
+        assert hosts_added[hostnum].display_name == mf_hosts[hostnum].display_name
+        assert hosts_added[hostnum].canonical_facts == mf_hosts[hostnum].canonical_facts
+        assert hosts_added[hostnum].facts == mf_hosts[hostnum].facts
+    return service
+
+
+def test_one_hosts_single_id(mfs, mf_hosts):
+    """We should be able to get one host by a single filter on ID."""
+    hosts_added = mfs.get()
+    hf = mfs.get(filters=[
         Filter(ids=[hosts_added[0].id])
     ])
-    assert isinstance(hf1, list)
-    assert len(hf1) == 1
-    assert hf1[0].display_name == hosts[0].display_name
+    assert isinstance(hf, list)
+    assert len(hf) == 1
+    assert hf[0].display_name in [h.display_name for h in mf_hosts]
 
-    # We should be able to get one host by a single filter on canonical fact.
-    hf2 = service.get(filters=[
+
+def test_one_host_one_fact(mfs):
+    """
+    We should be able to get one host by a single filter
+    on canonical fact.
+    """
+    hf = mfs.get(filters=[
         Filter(canonical_facts={
             'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF11'
         })
     ])
-    assert isinstance(hf2, list)
-    assert len(hf2) == 1
-    assert hf2[0].display_name == hosts[1].display_name
+    assert isinstance(hf, list)
+    assert len(hf) == 1
 
-    # We should be able to get multiple hosts by a single filter on account fact.
-    hf3 = service.get(filters=[
+
+def test_multiple_hosts_one_account(mfs, mf_hosts):
+    """
+    We should be able to get multiple hosts by a single
+    filter on account fact.
+    """
+    hf = mfs.get(filters=[
         Filter(facts={'advisor': {'account': '1122334'}})
     ])
-    assert isinstance(hf3, list)
-    assert len(hf3) == 2
+    assert isinstance(hf, list)
+    assert len(hf) == 2
     # Hosts are returned in random order, so check sorted lists
-    assert sorted(h.display_name for h in hf3) == sorted(h.display_name for h in hosts[2:4])
+    assert sorted(h.display_name for h in hf) == sorted(h.display_name for h in mf_hosts[2:4])
 
-    # We should be able to get a single host by multiple filters on account facts.
-    # Separate filters AND together - intersection of sets.
-    hf4 = service.get(filters=[
+
+def test_one_host_multiple_filters(mfs, mf_hosts):
+    """
+    We should be able to get a single host by multiple filters on account facts.
+    Separate filters AND together - intersection of sets.
+    """
+    hf = mfs.get(filters=[
         Filter(facts={'advisor': {'account': '1122334'}}),
         Filter(facts={'advisor': {'role': 'host'}})
     ])
-    assert isinstance(hf4, list)
-    assert len(hf4) == 1
-    assert hf4[0].display_name == hosts[2].display_name
+    assert isinstance(hf, list)
+    assert len(hf) == 1
+    assert hf[0].display_name == mf_hosts[2].display_name
 
+
+def test_one_host_account_and_uuid(mfs, mf_hosts):
     # We should be able to get a single host by multiple filters on facts and canonical_facts.
-    hf5 = service.get(filters=[
+    hf = mfs.get(filters=[
         Filter(facts={'advisor': {'account': '1234567'}}),
         Filter(canonical_facts={
             'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF11',
         })
     ])
-    assert isinstance(hf5, list)
-    assert len(hf5) == 1
-    assert hf5[0].display_name == hosts[1].display_name
+    assert isinstance(hf, list)
+    assert len(hf) == 1
+    assert hf[0].display_name == mf_hosts[1].display_name
 
-    # When multiple filters have no intersection, we should get nothing
-    hf6 = service.get(filters=[
+
+def test_no_hosts_multiple_filters(mfs, mf_hosts):
+    """When multiple filters have no intersection, we should get nothing"""
+    hf = mfs.get(filters=[
         Filter(facts={'advisor': {'account': '1122334'}}),
         Filter(canonical_facts={
             'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF11'
         })
     ])
-    assert isinstance(hf6, list)
-    assert len(hf6) == 0
+    assert isinstance(hf, list)
+    assert len(hf) == 0
 
-    # We should be able to get multiple hosts with a single filter that
-    # looks for two separate account facts.
-    # In the same filter, facts OR together - union of sets.
-    hf7 = service.get(filters=[
+
+def test_multiple_hosts_and_facts_one_filter(mfs, mf_hosts):
+    """
+    We should be able to get multiple hosts with a single filter that
+    looks for two separate account facts.
+    In the same filter, facts OR together - union of sets.
+    """
+    hf = mfs.get(filters=[
         Filter(facts={'advisor': {'account': '1122334', 'role': 'manager'}})
     ])
-    assert isinstance(hf7, list)
-    assert len(hf7) == 3
+    assert isinstance(hf, list)
+    assert len(hf) == 3
     # Hosts are returned in random order, so check sorted lists
-    assert sorted(h.display_name for h in hf7) == sorted(h.display_name for h in hosts[1:4])
+    assert sorted(h.display_name for h in hf) == sorted(h.display_name for h in mf_hosts[1:4])
 
-    # If one filter matches something that doesn't exist, and there are
-    # multiple filters, we should still get nothing (canonical fact first)
-    hf8 = service.get(filters=[
+
+def test_one_filter_takes_out_all(mfs, mf_hosts):
+    """
+    If one filter matches something that doesn't exist, and there are
+    multiple filters, we should still get nothing (canonical fact first)
+    """
+    hf = mfs.get(filters=[
         Filter(canonical_facts={
             'insights_uuid': '11223344-5566-7788-99AA-000000000000'
         }),
         Filter(facts={'advisor': {'account': '1122334'}}),
     ])
-    assert isinstance(hf8, list)
-    assert len(hf8) == 0
+    assert isinstance(hf, list)
+    assert len(hf) == 0
 
-    # If one filter matches something that doesn't exist, and there are
-    # multiple filters, we should still get nothing (multiple fact first)
-    hf9 = service.get(filters=[
+
+def test_one_filter_takes_out_all_reverse_order(mfs, mf_hosts):
+    """
+    If one filter matches something that doesn't exist, and there are
+    multiple filters, we should still get nothing (multiple fact first)
+    """
+    hf = mfs.get(filters=[
         Filter(facts={'advisor': {'account': '1122334'}}),
         Filter(canonical_facts={
             'insights_uuid': '11223344-5566-7788-99AA-000000000000'
         }),
     ])
-    assert isinstance(hf9, list)
-    assert len(hf9) == 0
+    assert isinstance(hf, list)
+    assert len(hf) == 0
 
 
 def test_get_fact(service):
