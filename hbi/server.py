@@ -22,9 +22,8 @@ class Index(object):
 
     def add(self, host):
         if not isinstance(host, Host):
-            raise ValueError("Index only stores Host objects, was given {h} (type {t})".format(
-                h=host, t=type(host)
-            ))
+            msg = f"Index only stores Host objects, was given type {type(host)}"
+            raise ValueError(msg)
         self.all_hosts.add(host)
         self.dict_[host.id] = host
         for t in host.canonical_facts.items():
@@ -49,7 +48,7 @@ class Index(object):
     def apply_filter(self, f, hosts=None):
         if hosts is None:
             hosts = self.all_hosts
-        elif hosts == set():
+        elif len(hosts) == 0:
             raise StopIteration
 
         # TODO: Actually USE the fact & tag namespaces
@@ -111,7 +110,7 @@ class Service(object):
             for f in filters:
                 filtered_set = set(self.index.apply_filter(f, filtered_set))
                 # If we have no results, we'll never get more so exit now.
-                if filtered_set == set():
+                if len(filtered_set) == 0:
                     return []
             return list(filtered_set)
 
