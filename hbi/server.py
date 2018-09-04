@@ -21,6 +21,10 @@ class Index(object):
         self.all_hosts = set()
 
     def add(self, host):
+        if not isinstance(host, Host):
+            raise ValueError("Index only stores Host objects, was given {h} (type {t})".format(
+                h=host, t=type(host)
+            ))
         self.all_hosts.add(host)
         self.dict_[host.id] = host
         for t in host.canonical_facts.items():
@@ -35,10 +39,7 @@ class Index(object):
 
     def get(self, host):
         if host.id:
-            h = self.dict_.get(host.id)
-            if h:
-                return h
-            raise ValueError(f"Could not locate a host with given id {host.id}")
+            return self.dict_.get(host.id)
 
         for t in host.canonical_facts.items():
             h = self.dict_.get(t)
@@ -46,7 +47,10 @@ class Index(object):
                 return h
 
     def apply_filter(self, f, hosts=None):
-        hosts = hosts or self.all_hosts
+        if hosts is None:
+            hosts = self.all_hosts
+        elif hosts == set():
+            raise StopIteration
 
         # TODO: Actually USE the fact & tag namespaces
         iterables = filter(None, (
@@ -106,7 +110,10 @@ class Service(object):
             filtered_set = None
             for f in filters:
                 filtered_set = set(self.index.apply_filter(f, filtered_set))
-            return list(filtered_set or set())
+                # If we have no results, we'll never get more so exit now.
+                if filtered_set == set():
+                    return []
+            return list(filtered_set)
 
 
 class Servicer(hbi_pb2_grpc.HostInventoryServicer):
