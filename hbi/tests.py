@@ -174,6 +174,20 @@ def test_one_host_multiple_filters(mfs, mf_hosts):
     assert hf[0].display_name == mf_hosts[2].display_name
 
 
+def test_one_host_multiple_filters_fact_first(mfs, mf_hosts):
+    """
+    We should be able to get a single host by multiple filters on account facts.
+    Separate filters AND together - intersection of sets.
+    """
+    hf = mfs.get(filters=[
+        Filter(facts={'advisor': {'role': 'host'}}),
+        Filter(account_numbers=['1122334']),
+    ])
+    assert isinstance(hf, list)
+    assert len(hf) == 1
+    assert hf[0].display_name == mf_hosts[2].display_name
+
+
 def test_one_host_account_and_uuid(mfs, mf_hosts):
     """
     We should be able to get a single host by multiple filters on facts and
@@ -190,6 +204,22 @@ def test_one_host_account_and_uuid(mfs, mf_hosts):
     assert hf[0].display_name == mf_hosts[1].display_name
 
 
+def test_one_host_account_and_uuid_cf_first(mfs, mf_hosts):
+    """
+    We should be able to get a single host by multiple filters on facts and
+    canonical_facts.
+    """
+    hf = mfs.get(filters=[
+        Filter(canonical_facts={
+            'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF11',
+        }),
+        Filter(account_numbers=['1234567']),
+    ])
+    assert isinstance(hf, list)
+    assert len(hf) == 1
+    assert hf[0].display_name == mf_hosts[1].display_name
+
+
 def test_no_hosts_multiple_filters(mfs, mf_hosts):
     """When multiple filters have no intersection, we should get nothing"""
     hf = mfs.get(filters=[
@@ -197,6 +227,18 @@ def test_no_hosts_multiple_filters(mfs, mf_hosts):
         Filter(canonical_facts={
             'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF11'
         })
+    ])
+    assert isinstance(hf, list)
+    assert len(hf) == 0
+
+
+def test_no_hosts_multiple_filters_cf_first(mfs, mf_hosts):
+    """When multiple filters have no intersection, we should get nothing"""
+    hf = mfs.get(filters=[
+        Filter(canonical_facts={
+            'insights_uuid': '11223344-5566-7788-99AA-BBCCDDEEFF11'
+        }),
+        Filter(account_numbers=['1122334']),
     ])
     assert isinstance(hf, list)
     assert len(hf) == 0
