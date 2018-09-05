@@ -63,7 +63,7 @@ class Index(object):
 
         if f.account_numbers:
             for acct in f.account_numbers:
-                yield from self.account_dict[acct]
+                yield from (h for h in hosts if acct == h.account_number)
 
         for i in chain(*iterables):
             v = self.dict_.get(i)
