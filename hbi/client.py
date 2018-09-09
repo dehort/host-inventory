@@ -1,3 +1,5 @@
+import json
+import requests
 import os
 import grpc
 from hbi import hbi_pb2 as pb
@@ -31,6 +33,21 @@ class Client(object):
         filter_list = [f.to_pb() for f in filters] if filters else None
         response = self.stub.Get(pb.FilterList(filters=filter_list))
         return [Host.from_pb(h) for h in response.hosts]
+
+
+class TornadoClient(object):
+
+    def create_or_update(self, hosts):
+        host_list = [h.to_json() for h in hosts]
+        response = requests.post("http://localhost:8080/entities", json=host_list)
+        assert response.status_code == 200
+        return [Host.from_json(h) for h in response.json()]
+
+    def get(self, filters=None):
+        filter_list = [f.to_json() for f in filters] if filters else None
+        response = requests.post("http://localhost:8080/entities/search", json=filter_list)
+        assert response.status_code == 200
+        return [Host.from_json(h) for h in response.json()]
 
 
 def run():

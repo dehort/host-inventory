@@ -50,6 +50,25 @@ class Filter(object):
             tags=to_fact_pb(self.tags)
         )
 
+    @classmethod
+    def from_json(cls, d):
+        return cls(
+            d.get("canonical_facts"),
+            d.get("ids"),
+            d.get("account_numbers"),
+            d.get("tags"),
+            d.get("facts")
+        )
+
+    def to_json(self):
+        return {
+            "canonical_facts": self.canonical_facts,
+            "ids": self.ids,
+            "account_numbers": self.account_numbers,
+            "tags": self.tags,
+            "facts": self.facts
+        }
+
 
 class Host(object):
 
@@ -73,6 +92,17 @@ class Host(object):
             from_fact_pb(host.facts),
         )
 
+    @classmethod
+    def from_json(cls, d):
+        return cls(
+            d.get("canonical_facts"),
+            d.get("id"),
+            d.get("account_number"),
+            d.get("display_name"),
+            d.get("tags"),
+            d.get("facts")
+        )
+
     def __hash__(self):
         return hash(self.id)
 
@@ -93,6 +123,16 @@ class Host(object):
                             canonical_facts=canonical_facts,
                             tags=tags,
                             facts=facts)
+
+    def to_json(self):
+        return {
+            "canonical_facts": self.canonical_facts,
+            "id": self.id,
+            "account_number": self.account_number,
+            "display_name": self.display_name,
+            "tags": self.tags,
+            "facts": self.facts
+        }
 
     def merge(self, new):
         for k, v in new.canonical_facts.items():

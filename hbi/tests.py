@@ -1,23 +1,29 @@
 import os
 import grpc
 
-from hbi.server import Host, Filter, Service, serve
+from hbi.server import Host, Filter, Service, serve, serve_tornado
 from hbi.util import names
-from hbi.client import Client
+from hbi.client import Client, TornadoClient
 from pytest import fixture
 
-GRPC = os.environ.get("GRPC", "false").lower() == "true"
+MODE = os.environ.get("MODE", "").lower()
+
+
+if MODE == "tornado":
+    app, loop = serve_tornado()
 
 
 @fixture
 def service():
-    if GRPC:
+    if MODE == "grpc":
         server = serve()
-        server.service = Service()
         connect_str = f"localhost:{os.environ.get('PORT', '50051')}"
         with grpc.insecure_channel(connect_str) as ch:
             yield Client(channel=ch)
         server.stop(0)
+    elif MODE == "tornado":
+        app.service.reset()
+        yield TornadoClient()
     else:
         yield Service()
 
