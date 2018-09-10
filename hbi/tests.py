@@ -1,15 +1,23 @@
 import os
-import grpc
 
-from hbi.server import Host, Filter, Service, serve, serve_tornado
+from hbi.server import Host, Filter, Service
 from hbi.util import names
-from hbi.client import Client, TornadoClient
 from pytest import fixture
 
 MODE = os.environ.get("MODE", "").lower()
 
 
+if MODE == "grpc":
+    import grpc
+    from hbi.server.grpc_server import serve
+    from hbi.client import Client
+
 if MODE == "tornado":
+    from hbi.client import TornadoClient
+    from hbi.server.tornado_server import serve_tornado
+    # Starting one instance of tornado application for the whole suite
+    # TODO: I tried to get it to stop the loop thread after tests are finished,
+    # but it's still not working.
     app, loop = serve_tornado()
 
 

@@ -16,8 +16,8 @@ class WatchdogTimer(FileSystemEventHandler):
         self.last = 0
 
     def restart(self):
-        print("Restarting...")
         if self.proc:
+            print("Restarting...")
             self.proc.kill()
             self.proc.wait()
         self.proc = subprocess.Popen(self.cmd)
