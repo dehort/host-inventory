@@ -1,9 +1,10 @@
-import timeit, os
+import timeit, os, sys
 from hbi.client import Client, TornadoClient
 from hbi import util
 from pytest import fixture
 from hbi.model import Host, Filter
 from hbi.server import Service
+from optparse import OptionParser
 
 MODE = os.environ.get("MODE", "").lower()
 
@@ -42,6 +43,8 @@ def addHosts(number_of_nodes, block_size):
             display_name = name
             facts = {"demo": {"hostname": f"{display_name}"}}
             canonical_facts = {'insights_uuid': display_name}
+
+            # add all hosts under the same account number
             host_list.append( Host(display_name=display_name, facts=facts, canonical_facts=canonical_facts, account_number='1') )
 
             number_of_nodes = number_of_nodes - 1
@@ -70,18 +73,52 @@ def wrapper(func, *args, **kwargs):
 
 
 if __name__ == "__main__":
-    block_size=100
-    number_of_nodes=1009
-    wrapped = wrapper(addHosts, number_of_nodes, block_size)
+
+    parser = OptionParser()
+
+    parser.add_option("-s", "--server",
+                      dest="host",
+                      type="string",
+                      help="Server name of the inventory server")
+
+    parser.add_option("-p", "--port",
+                      dest="port",
+                      type="int",
+                      default=50051,
+                      help="Port number inventory server is listening on")
+
+    parser.add_option("-n", "--number-hosts",
+                      dest="number_of_hosts",
+                      type="int",
+                      default=100,
+                      help="Total number of hosts to add")
+
+    parser.add_option("-b", "--block-size",
+                      dest="block_size",
+                      type="int",
+                      default=10,
+                      help="Block size to send to the server while adding hosts")
+
+    (options, args) = parser.parse_args()
+
+    print(options)
+
+    if not options.host or not options.port:
+        parser.print_help()
+        sys.exit(1)
+
+    wrapped = wrapper(addHosts, options.number_of_hosts, options.block_size)
     timeCallTook = timeit.timeit(wrapped, number=1)
-    print(f"Added {number_of_nodes} hosts using block size of {block_size} took {timeCallTook}")
+    print(f"Added {options.number_of_hosts} hosts using block size of {options.block_size} took {timeCallTook}")
 
 
+    # simulate a simple ping
     wrapped = wrapper(getHosts, [Filter(facts = {"demo": {"hostname": f"node1"}})])
     timeCallTook = timeit.timeit(wrapped, number=10)
     print(f"Get single host x 10 took {timeCallTook}")
 
-
+    
+    # ask for all nodes that were added above
     wrapped = wrapper(getHosts, [Filter(account_numbers='1')])
     timeCallTook = timeit.timeit(wrapped, number=10)
     print(f"Get multiple host x 10 took {timeCallTook}")
