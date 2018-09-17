@@ -1,4 +1,4 @@
-import json
+import json, os
 from threading import Thread
 
 from tornado.ioloop import IOLoop
@@ -38,7 +38,7 @@ def serve_tornado():
         (r"/entities/search", EntitiesSearcher),
         (r"/entities", EntitiesPoster),
     ])
-    app.listen(8080)
+    app.listen(int(os.environ.get("PORT", "50051")))
     app.service = Service()
     loop = IOLoop.current()
 

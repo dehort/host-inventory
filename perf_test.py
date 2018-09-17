@@ -6,32 +6,24 @@ from hbi.model import Host, Filter
 from hbi.server import Service
 from optparse import OptionParser
 
-MODE = os.environ.get("MODE", "").lower()
 
-
-if MODE == "grpc":
-    import grpc
-    from hbi.client import Client
-    print("Running in gRPC mode")
-
-if MODE == "tornado":
-    from hbi.client import TornadoClient
-    print("Running in REST mode")
-
-
-def createClient():
-    if MODE == "grpc":
-        return Client(host="localhost", port="50051")
-    elif MODE == "tornado":
-        return TornadoClient(host="localhost", port="8080")
-    elif MODE == "native":
+def createClient(mode, server, port):
+    if mode == "grpc":
+        import grpc
+        from hbi.client import Client
+        print("Running in gRPC mode")
+        return Client(host=server, port=port)
+    elif mode == "tornado":
+        from hbi.client import TornadoClient
+        print("Running in REST mode")
+        return TornadoClient(host=server, port=port)
+    elif mode == "native":
         return Service()
     else:
         raise RuntimeError("The MODE envrionment property was not set")
 
 
-def addHosts(number_of_nodes, block_size):
-    stub = createClient()
+def addHosts(stub, number_of_nodes, block_size):
     host_list = []
 
     while number_of_nodes > 0:
@@ -56,14 +48,13 @@ def addHosts(number_of_nodes, block_size):
         host_list.clear()
 
 
-def getHosts(filter_list):
-    stub = createClient()
+def getHosts(stub, filter_list):
 
-    #print(filter_list)
+    print("Filter list lengh:", len(filter_list))
 
     host_list = stub.get(filter_list)
 
-    #print(host_list)
+    print("Host list length:", len(host_list))
 
 
 def wrapper(func, *args, **kwargs):
@@ -77,7 +68,7 @@ if __name__ == "__main__":
     parser = OptionParser()
 
     parser.add_option("-s", "--server",
-                      dest="host",
+                      dest="server",
                       type="string",
                       help="Server name of the inventory server")
 
@@ -99,26 +90,34 @@ if __name__ == "__main__":
                       default=10,
                       help="Block size to send to the server while adding hosts")
 
+    parser.add_option("-m", "--mode",
+                      dest="mode",
+                      default="native",
+                      type="string",
+                      help="Server \"mode\" to use (native, tornado, grpc)")
+
     (options, args) = parser.parse_args()
 
     print(options)
 
-    if not options.host or not options.port:
+    if not options.server or not options.port:
         parser.print_help()
         sys.exit(1)
 
-    wrapped = wrapper(addHosts, options.number_of_hosts, options.block_size)
+    stub = createClient(options.mode, options.server, options.port)
+
+    wrapped = wrapper(addHosts, stub, options.number_of_hosts, options.block_size)
     timeCallTook = timeit.timeit(wrapped, number=1)
     print(f"Added {options.number_of_hosts} hosts using block size of {options.block_size} took {timeCallTook}")
 
 
     # simulate a simple ping
-    wrapped = wrapper(getHosts, [Filter(facts = {"demo": {"hostname": f"node1"}})])
+    wrapped = wrapper(getHosts, stub, [Filter(facts = {"demo": {"hostname": f"node1"}})])
     timeCallTook = timeit.timeit(wrapped, number=10)
     print(f"Get single host x 10 took {timeCallTook}")
 
     
     # ask for all nodes that were added above
-    wrapped = wrapper(getHosts, [Filter(account_numbers='1')])
+    wrapped = wrapper(getHosts, stub, [Filter(account_numbers='1')])
     timeCallTook = timeit.timeit(wrapped, number=10)
     print(f"Get multiple host x 10 took {timeCallTook}")
