@@ -1,4 +1,5 @@
-#!/usr/bin/env sh
+#!/usr/bin/env python3
 
-pipenv run ./build.sh
-pipenv run python3 -m hbi.server
+from hbi.server.tornado_server import serve_tornado
+
+serve_tornado()
