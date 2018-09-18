@@ -36,15 +36,19 @@ class Client(object):
 
 class TornadoClient(object):
 
+    def __init__(self, host=HOST, port=PORT):
+        self.host = host
+        self.port = port
+
     def create_or_update(self, hosts):
         host_list = [h.to_json() for h in hosts]
-        response = requests.post("http://localhost:8080/entities", json=host_list)
+        response = requests.post(f"http://{self.host}:{self.port}/entities", json=host_list)
         assert response.status_code == 200
         return [Host.from_json(h) for h in response.json()]
 
     def get(self, filters=None):
         filter_list = [f.to_json() for f in filters] if filters else None
-        response = requests.post("http://localhost:8080/entities/search", json=filter_list)
+        response = requests.post(f"http://{self.host}:{self.port}/entities/search", json=filter_list)
         assert response.status_code == 200
         return [Host.from_json(h) for h in response.json()]
 

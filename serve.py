@@ -9,7 +9,7 @@ import time
 class WatchdogTimer(FileSystemEventHandler):
 
     proc = None
-    cmd = ["python", "-m", "hbi.server"]
+    cmd = ["python", "-m", "hbi.server.grpc_server"]
 
     def __init__(self):
         self.restart()
