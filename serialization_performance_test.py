@@ -1,0 +1,161 @@
+import timeit, os, sys, json
+
+from hbi import hbi_pb2 as pb
+from optparse import OptionParser
+from hbi.model import Host
+
+
+def createPBHost(i):
+    name = f"node{i}"
+    display_name = name
+    facts = [pb.Fact(namespace="namespace", key="k", value="v")]
+    canonical_facts = [pb.CanonicalFact(key="insights_uuid", value="value")]
+    account_number="12345"
+    tags=[pb.Fact(namespace="tags", key="k", value="v")]
+
+    return pb.Host(id=f"{i}",
+                   account_number=account_number,
+                   display_name=display_name,
+                   canonical_facts=canonical_facts,
+                   tags=tags,
+                   facts=facts)
+
+
+def createPythonHost(i):
+    name = f"node{i}"
+    display_name = name
+    facts = {"demo": {"hostname": f"{display_name}"}}
+    tags = {"tags": {"hostname": f"{display_name}"}}
+    canonical_facts = {'insights_uuid': display_name}
+    account_number="12345"
+
+    return Host(id_=f"{i}",
+                account_number=account_number,
+                display_name=display_name, 
+                facts=facts, 
+                tags=tags,
+                canonical_facts=canonical_facts)
+
+
+def createPBHosts(number_of_nodes):
+    i = 0
+    host_list = []
+    while number_of_nodes > 0:
+        host_list.append( createPBHost(i) )
+        number_of_nodes = number_of_nodes - 1
+        i = i + 1
+    #print(host_list)
+
+
+def createPythonHosts(number_of_nodes):
+    i = 0
+    host_list = []
+    while number_of_nodes > 0:
+        host_list.append( createPythonHost(i) )
+        number_of_nodes = number_of_nodes - 1
+        i = i + 1
+    #print(host_list)
+
+
+def testJsonHosts(number_of_nodes, block_size):
+    host_list = []
+
+    while number_of_nodes > 0:
+
+        i = 0
+
+        while i < block_size and number_of_nodes > 0:
+            # add all hosts under the same account number
+            host_list.append( createPythonHost(i) )
+
+            number_of_nodes = number_of_nodes - 1
+
+            i = i + 1
+
+        json_output = json.dumps([h.to_json() for h in host_list])
+        hosts_json = json.loads(json_output)
+        returned_json_host_list = [Host.from_json(h) for h in hosts_json]
+        assert len(host_list) == len(returned_json_host_list)
+
+        host_list.clear()
+
+
+def testPBHosts(number_of_nodes, block_size):
+    host_list = []
+
+    while number_of_nodes > 0:
+
+        i = 0
+
+        while i < block_size and number_of_nodes > 0:
+            host_list.append( createPBHost(i) ) 
+
+            number_of_nodes = number_of_nodes - 1
+
+            i = i + 1
+
+        pb_host_list = pb.HostList(hosts=host_list)
+
+        returned_pb_host_list = pb.HostList()
+
+        # Comment this out to calculate object creation time
+        returned_pb_host_list.ParseFromString(pb_host_list.SerializeToString())
+        assert len(pb_host_list.hosts) == len(returned_pb_host_list.hosts)
+
+        host_list.clear()
+
+
+
+def wrapper(func, *args, **kwargs):
+    def wrapped():
+        return func(*args, **kwargs)
+    return wrapped
+
+
+if __name__ == "__main__":
+
+    parser = OptionParser()
+
+    parser.add_option("-n", "--number-hosts",
+                      dest="number_of_hosts",
+                      type="int",
+                      default=1,
+                      help="Total number of hosts to add")
+
+    parser.add_option("-b", "--block-size",
+                      dest="block_size",
+                      type="int",
+                      default=10,
+                      help="Block size to send to the server while adding hosts")
+
+    parser.add_option("-m", "--mode",
+                      dest="mode",
+                      default="native",
+                      type="string",
+                      help="Server \"mode\" to use (native, tornado, grpc)")
+
+    parser.add_option("-c", "--count",
+                      dest="count",
+                      default=1,
+                      type="int",
+                      help="Number of times to run the test")
+
+
+    (options, args) = parser.parse_args()
+
+    wrapped = wrapper(testPBHosts, options.number_of_hosts, options.block_size)
+    timeCallTook = timeit.timeit(wrapped, number=options.count)
+    print(f"Marshalled/Unmarshalled {options.number_of_hosts} ProtocolBuff hosts took ",timeCallTook/options.count)
+
+    wrapped = wrapper(testJsonHosts, options.number_of_hosts, options.block_size)
+    timeCallTook = timeit.timeit(wrapped, number=options.count)
+    print(f"Marshalled/Unmarshalled {options.number_of_hosts} JSON hosts took ",timeCallTook/options.count)
+
+    wrapped = wrapper(createPBHosts, options.number_of_hosts)
+    timeCallTook = timeit.timeit(wrapped, number=options.count)
+    print(f"Created {options.number_of_hosts} ProtocolBuff hosts took ",timeCallTook/options.count)
+
+    wrapped = wrapper(createPythonHosts, options.number_of_hosts)
+    timeCallTook = timeit.timeit(wrapped, number=options.count)
+    print(f"Created {options.number_of_hosts} Python hosts took ",timeCallTook/options.count)
+
