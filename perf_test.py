@@ -96,6 +96,12 @@ if __name__ == "__main__":
                       type="string",
                       help="Server \"mode\" to use (native, tornado, grpc)")
 
+    parser.add_option("-c", "--count",
+                      dest="count",
+                      default=1,
+                      type="int",
+                      help="Number of times to run the test")
+
     (options, args) = parser.parse_args()
 
     print(options)
@@ -107,17 +113,17 @@ if __name__ == "__main__":
     stub = createClient(options.mode, options.server, options.port)
 
     wrapped = wrapper(addHosts, stub, options.number_of_hosts, options.block_size)
-    timeCallTook = timeit.timeit(wrapped, number=1)
-    print(f"Added {options.number_of_hosts} hosts using block size of {options.block_size} took {timeCallTook}")
+    timeCallTook = timeit.timeit(wrapped, number=options.count)
+    print(f"Added {options.number_of_hosts} hosts using block size of {options.block_size} took ", timeCallTook/options.count)
 
 
     # simulate a simple ping
     wrapped = wrapper(getHosts, stub, [Filter(facts = {"demo": {"hostname": f"node1"}})])
-    timeCallTook = timeit.timeit(wrapped, number=10)
-    print(f"Get single host x 10 took {timeCallTook}")
+    timeCallTook = timeit.timeit(wrapped, number=options.count)
+    print(f"Get single host took ", timeCallTook/options.count)
 
     
     # ask for all nodes that were added above
     wrapped = wrapper(getHosts, stub, [Filter(account_numbers='1')])
-    timeCallTook = timeit.timeit(wrapped, number=10)
-    print(f"Get multiple host x 10 took {timeCallTook}")
+    timeCallTook = timeit.timeit(wrapped, number=options.count)
+    print(f"Get multiple host took ",timeCallTook/options.count)
