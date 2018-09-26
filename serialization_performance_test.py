@@ -8,10 +8,10 @@ from hbi.model import Host
 def createPBHost(i):
     name = f"node{i}"
     display_name = name
-    facts = [pb.Fact(namespace="namespace", key="k", value="v")]
-    canonical_facts = [pb.CanonicalFact(key="insights_uuid", value="value")]
+    facts = {"fact_namespace:k1":"v1", "fact_namespace:k2":"v2"}
+    canonical_facts = {"insights_uuid":"value", "cf1":"v1"}
     account_number="12345"
-    tags=[pb.Fact(namespace="tags", key="k", value="v")]
+    tags={"tag_namespace:k":"v", "tag_namespace:k2":"v2"}
 
     return pb.Host(id=f"{i}",
                    account_number=account_number,
@@ -24,10 +24,10 @@ def createPBHost(i):
 def createPythonHost(i):
     name = f"node{i}"
     display_name = name
-    facts = {"demo": {"hostname": f"{display_name}"}}
-    tags = {"tags": {"hostname": f"{display_name}"}}
-    canonical_facts = {'insights_uuid': display_name}
+    facts = {"fact_namespace:k1":"v1", "fact_namespace:k2":"v2"}
+    canonical_facts = {"insights_uuid":"value", "cf1":"v1"}
     account_number="12345"
+    tags={"tag_namespace:k":"v", "tag_namespace:k2":"v2"}
 
     return Host(id_=f"{i}",
                 account_number=account_number,
@@ -96,11 +96,22 @@ def testPBHosts(number_of_nodes, block_size):
 
         pb_host_list = pb.HostList(hosts=host_list)
 
+        #print(pb_host_list.hosts)
+
         returned_pb_host_list = pb.HostList()
 
         # Comment this out to calculate object creation time
         returned_pb_host_list.ParseFromString(pb_host_list.SerializeToString())
         assert len(pb_host_list.hosts) == len(returned_pb_host_list.hosts)
+
+        #print("****")
+        #print(returned_pb_host_list.hosts)
+        #print("****")
+        #for key in pb_host_list.hosts[0].facts:
+        #    print( key, "=>", pb_host_list.hosts[0].facts[key])
+        #    print( key, "=>", returned_pb_host_list.hosts[0].facts[key])
+        #print("fact:",pb_host_list.hosts[0].facts["fact_namespace:k1"])
+        #print("fact:",returned_pb_host_list.hosts[0].facts["fact_namespace:k1"])
 
         host_list.clear()
 

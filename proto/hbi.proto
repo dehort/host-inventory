@@ -46,9 +46,9 @@ message Fact {
 message Host {
     string id = 1;
     string display_name = 2;
-    repeated Fact facts = 3;
-    repeated CanonicalFact canonical_facts = 4;
-    repeated Fact tags = 5;
+    map<string, string> facts = 3;
+    map<string, string> canonical_facts = 4;
+    map<string, string> tags = 5;
     google.protobuf.Timestamp created = 6;
     google.protobuf.Timestamp updated = 7;
     string account_number = 8;
