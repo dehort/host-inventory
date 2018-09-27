@@ -7,7 +7,8 @@ from hbi.model import Host, Filter
 
 
 def flat_fact_chain(f):
-    return chain.from_iterable(v.items() for v in f.values())
+    #return chain.from_iterable(v.items() for v in f.values())
+    return f
 
 
 class Index(object):

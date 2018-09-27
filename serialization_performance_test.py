@@ -77,6 +77,9 @@ def testJsonHosts(number_of_nodes, block_size):
         returned_json_host_list = [Host.from_json(h) for h in hosts_json]
         assert len(host_list) == len(returned_json_host_list)
 
+        #for i in returned_json_host_list:
+        #    print("returned host:",i)
+
         host_list.clear()
 
 
@@ -103,6 +106,9 @@ def testPBHosts(number_of_nodes, block_size):
         # Comment this out to calculate object creation time
         returned_pb_host_list.ParseFromString(pb_host_list.SerializeToString())
         assert len(pb_host_list.hosts) == len(returned_pb_host_list.hosts)
+
+        #for i in returned_pb_host_list.hosts:
+        #    print("returned host:",i)
 
         #print("****")
         #print(returned_pb_host_list.hosts)

@@ -16,9 +16,10 @@ class Servicer(hbi_pb2_grpc.HostInventoryServicer):
         self.service = Service()
 
     def CreateOrUpdate(self, host_list, context):
-        hosts = [Host.from_pb(h) for h in host_list.hosts]
-        ret = self.service.create_or_update(hosts)
-        return hbi_pb2.HostList(hosts=[h.to_pb() for h in ret])
+        #ret = self.service.create_or_update(hosts_list.host)
+        #return hbi_pb2.HostList(hosts=ret)
+        print(host_list)
+        return host_list
 
     def Get(self, filter_list, context):
         filters = [Filter.from_pb(f) for f in filter_list.filters]

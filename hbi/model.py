@@ -5,19 +5,18 @@ from hbi import hbi_pb2
 
 def to_fact_pb(ft, canonical=False):
     if canonical:
-        return [hbi_pb2.CanonicalFact(key=k, value=v)
-                for k, v in ft.items()]
+        return ft
     else:
-        return [hbi_pb2.Fact(namespace=namespace, key=k, value=v)
-                for namespace, facts in ft.items()
-                for k, v in facts.items()]
+        return ft
+        #return {namespace+":"+k: v for namespace, facts in ft.items()
+        #                           for k, v in facts.items()}
 
 
 def from_fact_pb(ft):
     d = defaultdict(dict)
     if ft:
-        for fact in ft:
-            d[fact.namespace][fact.key] = fact.value
+        for key in ft:
+            d[key] = ft[key]
     return d
 
 
@@ -84,7 +83,7 @@ class Host(object):
     @classmethod
     def from_pb(cls, host):
         return cls(
-            {f.key: f.value for f in host.canonical_facts},
+            from_fact_pb(host.canonical_facts),
             host.id,
             host.account_number,
             host.display_name,

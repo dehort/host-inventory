@@ -33,8 +33,10 @@ def addHosts(stub, number_of_nodes, block_size):
         while i < block_size and number_of_nodes > 0:
             name = f"node{number_of_nodes}"
             display_name = name
-            facts = {"demo": {"hostname": f"{display_name}"}}
-            canonical_facts = {'insights_uuid': display_name}
+
+            facts = {"fact_namespace:k1":"v1", "fact_namespace:k2":"v2"} 
+            canonical_facts = {"insights_uuid":"value", "cf1":"v1"} 
+            account_number="12345" 
 
             # add all hosts under the same account number
             host_list.append( Host(display_name=display_name, facts=facts, canonical_facts=canonical_facts, account_number='1') )
@@ -44,7 +46,12 @@ def addHosts(stub, number_of_nodes, block_size):
             i = i + 1
 
         print("** adding hosts:",len(host_list))
-        stub.create_or_update(host_list)
+        ret_host_list = stub.create_or_update(host_list)
+        assert len(host_list) == len(ret_host_list)
+        print("** returned hosts:", len(ret_host_list))
+        for i in ret_host_list:
+            #print(i)
+            print(f"id: {i.id}, display_name: {i.display_name}, cf: {i.canonical_facts}, facts: {i.facts}, tags: {i.tags}")
         host_list.clear()
 
 
@@ -117,13 +124,13 @@ if __name__ == "__main__":
     print(f"Added {options.number_of_hosts} hosts using block size of {options.block_size} took ", timeCallTook/options.count)
 
 
-    # simulate a simple ping
-    wrapped = wrapper(getHosts, stub, [Filter(facts = {"demo": {"hostname": f"node1"}})])
-    timeCallTook = timeit.timeit(wrapped, number=options.count)
-    print(f"Get single host took ", timeCallTook/options.count)
+    ## simulate a simple ping
+    #wrapped = wrapper(getHosts, stub, [Filter(facts = {"demo": {"hostname": f"node1"}})])
+    #timeCallTook = timeit.timeit(wrapped, number=options.count)
+    #print(f"Get single host took ", timeCallTook/options.count)
 
     
-    # ask for all nodes that were added above
-    wrapped = wrapper(getHosts, stub, [Filter(account_numbers='1')])
-    timeCallTook = timeit.timeit(wrapped, number=options.count)
-    print(f"Get multiple host took ",timeCallTook/options.count)
+    ## ask for all nodes that were added above
+    #wrapped = wrapper(getHosts, stub, [Filter(account_numbers='1')])
+    #timeCallTook = timeit.timeit(wrapped, number=options.count)
+    #print(f"Get multiple host took ",timeCallTook/options.count)
