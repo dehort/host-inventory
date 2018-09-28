@@ -8,9 +8,20 @@ from hbi.model import Host
 def createPBHost(i):
     name = f"node{i}"
     display_name = name
+    account_number="12345"
+    #facts = [pb.Fact(namespace="fact_namespace",key="k1", value="v1"), 
+    #         pb.Fact(namespace="fact_namespace",key="k2",value="v2")]
+    #canonical_facts = [pb.CanonicalFact(key="insights_uuid", value="value"),
+    #                   pb.CanonicalFact(key="cf1", value="v1")]
+    #tags = [pb.Fact(namespace="tag_namespace",key="k1", value="v1"), 
+    #         pb.Fact(namespace="tag_namespace",key="k2",value="v2")]
+
+    #facts = [pb.Fact(namespace="fact_namespace",key="k1", value="v1")]
+    #canonical_facts = [pb.CanonicalFact(key="insights_uuid", value="value")]
+    #tags = [pb.Fact(namespace="tag_namespace",key="k1", value="v1")]
+
     facts = {"fact_namespace:k1":"v1", "fact_namespace:k2":"v2"}
     canonical_facts = {"insights_uuid":"value", "cf1":"v1"}
-    account_number="12345"
     tags={"tag_namespace:k":"v", "tag_namespace:k2":"v2"}
 
     return pb.Host(id=f"{i}",
@@ -24,9 +35,9 @@ def createPBHost(i):
 def createPythonHost(i):
     name = f"node{i}"
     display_name = name
+    account_number="12345"
     facts = {"fact_namespace:k1":"v1", "fact_namespace:k2":"v2"}
     canonical_facts = {"insights_uuid":"value", "cf1":"v1"}
-    account_number="12345"
     tags={"tag_namespace:k":"v", "tag_namespace:k2":"v2"}
 
     return Host(id_=f"{i}",
@@ -78,7 +89,7 @@ def testJsonHosts(number_of_nodes, block_size):
         assert len(host_list) == len(returned_json_host_list)
 
         #for i in returned_json_host_list:
-        #    print("returned host:",i)
+        #    print(f"id: {i.id}, display_name: {i.display_name}, cf: {i.canonical_facts}, facts: {i.facts}, tags: {i.tags}")
 
         host_list.clear()
 
@@ -108,14 +119,18 @@ def testPBHosts(number_of_nodes, block_size):
         assert len(pb_host_list.hosts) == len(returned_pb_host_list.hosts)
 
         #for i in returned_pb_host_list.hosts:
-        #    print("returned host:",i)
+        #    print(f"id: {i.id}, display_name: {i.display_name}, cf: {i.canonical_facts}, facts: {i.facts}, tags: {i.tags}")
 
         #print("****")
         #print(returned_pb_host_list.hosts)
         #print("****")
-        #for key in pb_host_list.hosts[0].facts:
+        #for key in returned_pb_host_list.hosts[0].facts:
         #    print( key, "=>", pb_host_list.hosts[0].facts[key])
-        #    print( key, "=>", returned_pb_host_list.hosts[0].facts[key])
+        #for key in returned_pb_host_list.hosts[0].canonical_facts:
+        #    print( key, "=>", pb_host_list.hosts[0].canonical_facts[key])
+        #for key in returned_pb_host_list.hosts[0].tags:
+        #    print( key, "=>", pb_host_list.hosts[0].tags[key])
+
         #print("fact:",pb_host_list.hosts[0].facts["fact_namespace:k1"])
         #print("fact:",returned_pb_host_list.hosts[0].facts["fact_namespace:k1"])
 

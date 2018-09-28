@@ -34,12 +34,22 @@ def addHosts(stub, number_of_nodes, block_size):
             name = f"node{number_of_nodes}"
             display_name = name
 
-            facts = {"fact_namespace:k1":"v1", "fact_namespace:k2":"v2"} 
-            canonical_facts = {"insights_uuid":"value", "cf1":"v1"} 
+            facts = {"fact_namespace:k1":"v1", "fact_namespace:k2":"v2", "fact_namespace:k3":"v3"}
+            canonical_facts = {"insights_uuid":"value", "cf1":"v1", "cf2":"v2"}
+            tags={"tag_namespace:k":"v", "tag_namespace:k2":"v2", "tag_namespace:k3":"v3"}
+ 
+            #facts = {"fact_namespace:k1":"v1", "fact_namespace:k2":"v2"}
+            #canonical_facts = {"insights_uuid":"value", "cf1":"v1"}
+            #tags={"tag_namespace:k":"v", "tag_namespace:k2":"v2"}
+
+            #facts = {"fact_namespace:k1":"v1"}
+            #canonical_facts = {"insights_uuid":"value"}
+            #tags={"tag_namespace:k":"v"}
+
             account_number="12345" 
 
             # add all hosts under the same account number
-            host_list.append( Host(display_name=display_name, facts=facts, canonical_facts=canonical_facts, account_number='1') )
+            host_list.append( Host(display_name=display_name, tags=tags, facts=facts, canonical_facts=canonical_facts, account_number='1') )
 
             number_of_nodes = number_of_nodes - 1
 
