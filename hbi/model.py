@@ -15,8 +15,7 @@ def to_fact_pb(ft, canonical=False):
 def from_fact_pb(ft):
     d = defaultdict(dict)
     if ft:
-        for key in ft:
-            d[key] = ft[key]
+        d.update(ft)
     return d
 
 

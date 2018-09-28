@@ -49,9 +49,9 @@ def addHosts(stub, number_of_nodes, block_size):
         ret_host_list = stub.create_or_update(host_list)
         assert len(host_list) == len(ret_host_list)
         print("** returned hosts:", len(ret_host_list))
-        for i in ret_host_list:
-            #print(i)
-            print(f"id: {i.id}, display_name: {i.display_name}, cf: {i.canonical_facts}, facts: {i.facts}, tags: {i.tags}")
+        #for i in ret_host_list:
+        #    #print(i)
+        #    print(f"id: {i.id}, display_name: {i.display_name}, cf: {i.canonical_facts}, facts: {i.facts}, tags: {i.tags}")
         host_list.clear()
 
 
